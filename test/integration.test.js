@@ -36,12 +36,18 @@ test("Teams endpoint rejects unsigned instructions with bot credentials configur
 
 test("plugin MCP process delivers through the private API and reports failures truthfully", async (t) => {
   const messages = [];
+  const authorCalls = [];
   const token = "b".repeat(64);
   const server = createNotificationServer({
     token,
     send: async (message) => {
       if (message === "offline") throw new Error("offline");
       messages.push(message);
+    },
+    author: async (action, args) => {
+      authorCalls.push([action, args]);
+      if (action === "start" && args.parentWorkItem === "bad") throw new Error("Invalid parent.");
+      return { running: action !== "stop", phase: "test fixture" };
     },
   });
   server.listen(0, "127.0.0.1");
@@ -63,4 +69,26 @@ test("plugin MCP process delivers through the private API and reports failures t
   assert.deepEqual(messages, ["Ready for review"]);
   const failed = await client.callTool({ name: "notify", arguments: { message: "offline" } });
   assert.equal(failed.isError, true);
+  assert.ok(tools.tools.some((tool) => tool.name === "author_start"));
+  const started = await client.callTool({ name: "author_start", arguments: { parentWorkItem: "123", aliases: ["gc2"] } });
+  assert.notEqual(started.isError, true);
+  const status = await client.callTool({ name: "author_status", arguments: {} });
+  assert.notEqual(status.isError, true);
+  const stopped = await client.callTool({ name: "author_stop", arguments: {} });
+  assert.notEqual(stopped.isError, true);
+  const adopted = await client.callTool({ name: "author_adopt", arguments: { alias: "gc2", id: 42 } });
+  assert.notEqual(adopted.isError, true);
+  const rejected = await client.callTool({ name: "author_start", arguments: { parentWorkItem: "bad" } });
+  assert.equal(rejected.isError, true);
+  const missingParent = await client.callTool({ name: "author_start", arguments: {} });
+  assert.equal(missingParent.isError, true);
+  assert.deepEqual(authorCalls, [
+    ["start", { parentWorkItem: "123", aliases: ["gc2"] }], ["status", {}], ["stop", {}],
+    ["adopt", { alias: "gc2", id: 42 }], ["start", { parentWorkItem: "bad" }],
+  ]);
+  const unauthorized = await fetch(`http://127.0.0.1:${server.address().port}/author/stop`, {
+    method: "POST", headers: { authorization: "Bearer wrong" }, body: "{}",
+  });
+  assert.equal(unauthorized.status, 401);
+  assert.equal(authorCalls.length, 5);
 });

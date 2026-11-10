@@ -38,7 +38,13 @@ or guess the Copilot plugin cache path.
    stopping on dependency-install failure. It does not overwrite existing
    `.env` or `config.json` itself. The existing wizard asks for the bot's name,
    configures a dedicated tunnel and Teams registration, offers to open the
-   install page, and can start the bridge and tunnel together.
+   install page, and can start the bridge and tunnel together. Each workspace
+   asks for an existing checkout or a new clone destination; cloning requires
+   explicit confirmation. Choosing continuous PR author setup additionally
+   requires Azure CLI with the azure-devops extension and authenticated ADO
+   access. The wizard resolves each repository's identity and asks for engineer
+   identity, normal target branches, and optional path-specific ancestry rules.
+   No ADO findings parent is saved in setup: every author start asks for it.
 5. Tell the user the setup terminal was opened, not that registration or setup
    has finished. They must complete sign-ins, confirm **Add** in Teams, and keep
    that terminal open while the bot runs. Ctrl+C stops the managed bot and

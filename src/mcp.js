@@ -19,7 +19,7 @@ if (!/^[a-f0-9]{64}$/i.test(env.BRIDGE_TOKEN ?? "")) {
   throw new Error("Configure BRIDGE_TOKEN in the plugin's .env file.");
 }
 const port = parsePort(env.NOTIFY_PORT ?? "3979");
-const server = new McpServer({ name: "teams-agent", version: "0.1.0" });
+const server = new McpServer({ name: "teams-agent", version: "0.3.0" });
 server.registerTool("notify", {
   description: "Send an update to the configured user's personal Teams chat as the devbox bot, never as the user.",
   inputSchema: { message: z.string().trim().min(1).max(12_000) },
@@ -41,4 +41,31 @@ server.registerTool("notify", {
     };
   }
 });
+for (const [action, description, inputSchema] of [
+  ["start", "Start one continuous PR Author on the devbox. Ask the user for the ADO parent work-item URL/ID EVERY start, or explicit none; never reuse an old parent. Requires configured repositories and the running, paired Teams bridge. Approval questions arrive in Teams.", {
+    parentWorkItem: z.string().trim().min(1).max(2048).nullable(),
+    aliases: z.array(z.string().regex(/^[a-z0-9-]+$/)).min(1).optional(),
+  }],
+  ["status", "Inspect the shared devbox PR Author; does not start another agent.", {}],
+  ["stop", "Stop the shared continuous PR Author. Already completed actions are not undone.", {}],
+  ["adopt", "Explicitly adopt a PR in a configured repository into the running Author portfolio.", {
+    alias: z.string().regex(/^[a-z0-9-]+$/), id: z.number().int().positive(),
+  }],
+]) {
+  server.registerTool(`author_${action}`, { description, inputSchema }, async (args) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:${port}/author/${action}`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${env.BRIDGE_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify(args), signal: AbortSignal.timeout(30_000), redirect: "error",
+      });
+      const result = await response.json();
+      if (!response.ok) return { isError: true, content: [{ type: "text", text: result.error ?? "Author action rejected." }] };
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+    } catch {
+      return { isError: true, content: [{ type: "text",
+        text: "Author action could not be confirmed. Check the bridge and author_status before retrying; no duplicate runner was intentionally started." }] };
+    }
+  });
+}
 await server.connect(new StdioServerTransport());

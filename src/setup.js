@@ -1,12 +1,13 @@
 import spawn from "cross-spawn";
 import { randomBytes } from "node:crypto";
-import { mkdir, mkdtemp, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
-import { isAbsolute, join, resolve, sep } from "node:path";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { join, resolve, sep } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseEnv } from "node:util";
 import { loadConfig } from "./config.js";
 import { checkLocalPorts, hostTunnel, runBridge } from "./setup-runtime.js";
+import { setupAuthor, workspaceDirectory } from "./author-config.js";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -126,11 +127,10 @@ export async function runSetup({ root, ask, log = console.log, run = runCommand,
     if (Object.keys(workspaces).length && !await yes("Add another workspace?", false)) break;
     const alias = await prompt("Workspace alias", "", (value) => /^[a-z0-9-]+$/.test(value)
       && !Object.hasOwn(workspaces, value));
-    const directory = await prompt("Absolute workspace directory", "", async (value) =>
-      isAbsolute(value) && (await stat(value)).isDirectory());
-    workspaces[alias] = await realpath(directory);
+    workspaces[alias] = await workspaceDirectory({ prompt, yes, run });
   } while (true);
   config.workspaces = workspaces;
+  await setupAuthor({ config, prompt, yes, run, log });
   env.BRIDGE_TOKEN ||= randomBytes(32).toString("hex");
   env.PORT ||= "3978";
   env.NOTIFY_PORT ||= "3979";

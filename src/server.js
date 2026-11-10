@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 import { loadConfig, isAllowedActivity, validateServiceUrl } from "./config.js";
 import { WorkspaceAgent } from "./agent.js";
 import { createNotificationServer } from "./notifications.js";
+import { ContinuousAuthor } from "./author.js";
+import { runCommand } from "./setup.js";
 
 const root = new URL("..\\", import.meta.url);
 const config = await loadConfig(root);
@@ -56,6 +58,11 @@ const client = new CopilotClient({
   env: childEnv,
 });
 const agent = new WorkspaceAgent({ client, workspaces: config.workspaces, send });
+agent.author = new ContinuousAuthor({
+  client, config: config.author, workspaces: config.workspaces, pending: agent.pending, send,
+  lockPath: join(process.env.COPILOT_HOME ?? join(homedir(), ".copilot"), "teams-agent", "author.lock"),
+  run: runCommand,
+});
 const adapter = new ExpressAdapter();
 const app = new App({ ...credentials, httpServerAdapter: adapter });
 adapter.get("/health", (_req, res) => res.json({ ok: true }));
@@ -91,7 +98,9 @@ app.on("message", async ({ activity }) => {
   await operation;
 });
 
-const notifications = createNotificationServer({ token: config.token, send });
+const notifications = createNotificationServer({
+  token: config.token, send, author: (action, args) => agent.controlAuthor(action, args),
+});
 const listen = (server, port) => new Promise((resolve, reject) => {
   server.once("error", reject);
   server.listen(port, "127.0.0.1", resolve);

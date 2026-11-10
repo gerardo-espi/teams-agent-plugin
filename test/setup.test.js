@@ -40,7 +40,7 @@ test("setup registers the requested bot name and produces usable local settings"
   const name = "Review & Build 'Agent'";
   await runSetup({
     root, log: () => {},
-    ask: answers([name, userId, "repo", workspace, "n", "y", "n", "https://example.devtunnels.ms", "n", "n"]),
+    ask: answers([name, userId, "repo", workspace, "n", "n", "y", "n", "https://example.devtunnels.ms", "n", "n"]),
     run: async (command, args) => {
       commands.push([command, args]);
       if (args[0] === "app") {
@@ -72,7 +72,7 @@ test("rerunning setup preserves credentials, token, ports, workspaces and option
   const config = { botName: "Original", workspaces: { repo: workspace }, extra: "keep me" };
   await writeFile(join(root, "config.json"), JSON.stringify(config));
   await runSetup({
-    root, log: () => {}, ask: answers(["", "", "y", "n", "n", "n", "n"]),
+    root, log: () => {}, ask: answers(["", "", "y", "n", "n", "n", "n", "n"]),
     run: () => assert.fail("Existing bot must not be re-registered"),
   });
   assert.deepEqual(parseEnv(await readFile(join(root, ".env"), "utf8")), parseEnv(existingEnv));
@@ -85,7 +85,7 @@ test("invalid answers are retried and no configuration is written without bot cr
   await assert.rejects(runSetup({
     root, log: (message) => logs.push(message),
     ask: answers(["x".repeat(31), "Agent", "not-an-id", userId,
-      "../invalid", "repo", join(root, "missing"), workspace, "n", "n"]),
+      "../invalid", "repo", "relative", workspace, "n", "n", "n"]),
     run: () => assert.fail("No registration expected"),
   }), /credentials are missing/);
   assert.equal(logs.filter((message) => message.startsWith("Invalid ")).length, 4);
@@ -100,7 +100,7 @@ test("registration failure leaves existing settings untouched and retains recove
   const logs = [];
   await assert.rejects(runSetup({
     root, log: (message) => logs.push(message),
-    ask: answers(["Agent", "", "repo", workspace, "n", "y", "n", "https://example.devtunnels.ms"]),
+    ask: answers(["Agent", "", "repo", workspace, "n", "n", "y", "n", "https://example.devtunnels.ms"]),
     run: async (_command, args) => {
       if (args[0] === "app") {
         await createBot(args);
@@ -120,7 +120,7 @@ test("invalid local ports are rejected before creating a bot", async (t) => {
   await writeFile(join(root, ".env"), `ALLOWED_USER_ID=${userId}\nPORT=3979\n`);
   await assert.rejects(runSetup({
     root, log: () => {},
-    ask: answers(["Agent", "", "repo", workspace, "n", "y", "n", "https://example.devtunnels.ms"]),
+    ask: answers(["Agent", "", "repo", workspace, "n", "n", "y", "n", "https://example.devtunnels.ms"]),
     run: () => assert.fail("Local settings must be validated before registration"),
   }), /must differ/);
   assert.deepEqual(await readdir(join(root, ".data")), []);
@@ -135,7 +135,7 @@ test("one setup command hosts the tunnel, registers, opens Teams and starts the 
   };
   await runSetup({
     root, log: () => {},
-    ask: answers(["My Assistant", userId, "repo", workspace, "n", "y", "y", "y", "y"]),
+    ask: answers(["My Assistant", userId, "repo", workspace, "n", "n", "y", "y", "y", "y"]),
     startTunnel: async ({ env }) => {
       assert.equal(env.PORT, "3978");
       events.push("host tunnel");
@@ -168,7 +168,7 @@ test("tunnel is stopped when registration or bot startup fails", async (t) => {
     let stopped = 0;
     await assert.rejects(runSetup({
       root, log: () => {},
-      ask: answers(["Agent", userId, "repo", workspace, "n", "y", "y", "n", "y"]),
+      ask: answers(["Agent", userId, "repo", workspace, "n", "n", "y", "y", "n", "y"]),
       startTunnel: async () => ({
         endpoint: "https://managed-3978.usw2.devtunnels.ms/api/messages", stop: async () => { stopped++; },
       }),
@@ -194,7 +194,7 @@ test("moving an existing bot to a managed tunnel requires confirmation and updat
   const endpoint = "https://managed-3978.usw2.devtunnels.ms/api/messages";
   await runSetup({
     root, log: () => {},
-    ask: answers(["", "", "y", "n", "n", "y", "", "y", "n", "n"]),
+    ask: answers(["", "", "y", "n", "n", "n", "y", "", "y", "n", "n"]),
     startTunnel: async () => ({ endpoint, stop: async () => {} }),
     run: async (command, args) => {
       commands.push([command, args]);

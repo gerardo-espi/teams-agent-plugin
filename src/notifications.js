@@ -1,14 +1,17 @@
 import { createServer } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 
-export function createNotificationServer({ token, send }) {
+export function createNotificationServer({ token, send, author }) {
   const expected = Buffer.from(`Bearer ${token}`);
   return createServer(async (req, res) => {
     const reply = (status, data) => {
       res.writeHead(status, { "Content-Type": "application/json" });
       res.end(JSON.stringify(data));
     };
-    if (req.method !== "POST" || req.url !== "/notify") return reply(404, { error: "Not found" });
+    const authorAction = /^\/author\/(start|status|stop|adopt)$/.exec(req.url ?? "")?.[1];
+    if (req.method !== "POST" || (req.url !== "/notify" && (!authorAction || !author))) {
+      return reply(404, { error: "Not found" });
+    }
     const actual = Buffer.from(req.headers.authorization ?? "");
     if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
       return reply(401, { error: "Unauthorized" });
@@ -22,7 +25,13 @@ export function createNotificationServer({ token, send }) {
         if (bytes > 32_000) return reply(413, { error: "Body too large" });
         chunks.push(chunk);
       }
-      const { message } = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      if (!body || typeof body !== "object" || Array.isArray(body)) return reply(400, { error: "Expected a JSON object" });
+      if (authorAction) {
+        try { return reply(200, await author(authorAction, body)); }
+        catch (error) { return reply(409, { error: error.message }); }
+      }
+      const { message } = body;
       if (typeof message !== "string" || !message.trim() || message.length > 12_000) {
         return reply(400, { error: "message must contain 1-12000 characters" });
       }

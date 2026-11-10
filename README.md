@@ -215,6 +215,93 @@ Teams to an existing interactive CLI conversation. Teams runs its own sessions.
 `BRIDGE_TOKEN` and `NOTIFY_PORT` environment variables can override the MCP
 process's `.env` values.
 
+## Continuous PR Author (Teams and CLI)
+
+The `teams-author` skill and Teams `/author` commands control **one shared
+bridge-owned runner**, not independent agents. It supports your configured
+Azure DevOps repositories: GC2, 1JS, PowerPoint, Office, or other working areas.
+There are no hardcoded repository IDs, checkout paths, engineer names, work
+items, or Designer App branch rules.
+
+Run setup once and choose **Enable continuous PR author commands**. For
+each workspace, supply an existing checkout or a new clone destination and
+explicitly approve its clone URL. Author workspaces must be actual Git checkout
+roots, each with exactly one registered worktree. Setup asks for your ADO
+email/identity, resolves repository GUIDs from their `origin` URLs with Azure
+CLI, and asks for normal target branches and optional path-prefix-specific
+target/isolated-history rules. Existing local changes are never discarded.
+Repository instructions supply additional product-specific conventions.
+
+Install Azure CLI and its Azure DevOps extension yourself if needed:
+
+```powershell
+winget install Microsoft.AzureCLI
+az extension add --name azure-devops
+az login
+```
+
+Reopen your terminal after installation. Use your organization's approved ADO
+authentication; setup does not collect PATs or alter tenant policy. Every chosen
+repository must be readable by the signed-in engineer. Git pushes and ADO writes
+use that engineer's existing permissions, even though chat messages use the bot.
+
+Start the bridge, pair it with your personal Teams chat, then send:
+
+```text
+/author start
+/answer <question ID> https://dev.azure.com/ORG/PROJECT/_workitems/edit/123
+/author status
+/author adopt gc2 456
+/author stop
+```
+
+**Every start asks for the parent work item again.** Reply `none` to disable
+finding selection; no previous parent is reused. A numeric ID is accepted only
+when the chosen repositories share one ADO organization. Multiple organizations
+require a full work-item URL. You can adopt a PR in a configured repository for
+the next fresh sweep. Adoption lasts for that run.
+
+From Copilot CLI, ask **Use the teams-author skill to start my continuous PR
+author**. The skill asks for this run's parent and calls `author_start`. Its
+`author_status`, `author_adopt`, and `author_stop` tools access the same runner.
+Approval requests and agent questions arrive in **Teams**, including for
+CLI-started runs. A personal Teams conversation must already be paired.
+
+The author refreshes authored/adopted PR inventories and seven priority buckets:
+conflicts/source failures, active blockers/builds, reviewer-last feedback,
+reviewed drafts, other draft/evidence hygiene, three-day late feedback, and
+eligible findings. It checks exact source/target/merge and policy/build evidence,
+keeps reviewer continuity, and prefixes PR replies `[Copilot][Author]`.
+One persistent Copilot SDK session works sequentially across the allowed
+checkouts. Normal ad-hoc bot tasks are blocked while the author owns them.
+
+The host validates per-cycle IDs, freshness timestamps, repository coverage,
+seven distinct bucket reports, and state fingerprints. Actions or transitions
+reset the clean counter; incomplete/error sweeps never count as clean. After
+three fresh no-action sweeps it waits five minutes (configurable via
+`author.pollIntervalMs`, 60 seconds to one hour), then automatically resumes.
+Pending review/builds are not mission completion. Failures wait for the next
+poll instead of tight-looping. A shared per-user Copilot-home
+`teams-agent\author.lock` prevents overlapping runners; after a crash remove
+that specific stale lock only after confirming its recorded process has exited.
+
+The user authorizes bounded edits, tests, commits, ordinary pushes, draft PRs
+and review replies. **Merging/completing PRs, rewriting published history and
+claiming/assigning work items require separate explicit approval.** All normal
+runtime tool approvals remain in force; denial/expiration is a blocker, not
+permission to retry silently. No automated history repair, blanket permission
+grant, extra worktree, duplicate runner, or global software installation occurs.
+
+Live ADO inspection and repairs are model-driven through approved Git/Azure CLI
+commands; structured reports are not independent proof of remote correctness.
+Actual tool results must back every evidence claim. The host checks checkout
+identity, remotes, worktree count and cleanliness before/after sweeps but cannot
+provide an OS sandbox or guarantee cancellation of already spawned commands.
+The devbox must stay awake and the bridge terminal must stay open. Shutdown
+stops polling; a new bridge requires another explicit start and parent question.
+Each sweep is bounded by the existing 30-minute turn timeout; its timeout
+invalidates the sweep and aborts runtime work before repolling.
+
 ## Trust boundary
 
 The Teams SDK authenticates inbound bot traffic; the bridge additionally checks
@@ -239,7 +326,8 @@ Pairing is locked to the first authorized personal conversation; to re-pair,
 stop the service and delete only `.data\conversation.json`.
 
 This version supports the public Microsoft cloud. Sovereign clouds require
-explicit endpoint/authentication changes. No service is auto-started or scheduled.
+explicit endpoint/authentication changes. No service auto-starts with Windows.
+Only an explicitly started Author schedules in-process polling.
 
 ## Development
 

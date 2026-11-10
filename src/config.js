@@ -1,5 +1,6 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute } from "node:path";
+import { validateAuthorConfig } from "./author-config.js";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -35,6 +36,7 @@ export async function loadConfig(root, env = process.env) {
     port,
     notifyPort,
     workspaces,
+    author: validateAuthorConfig(config.author, workspaces),
   };
 }
 

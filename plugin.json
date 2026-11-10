@@ -1,7 +1,7 @@
 {
   "name": "teams-agent",
-  "version": "0.2.0",
-  "description": "Send updates to your personal Teams bot from a local Copilot workspace.",
+  "version": "0.3.0",
+  "description": "Control your devbox through a personal Teams bot, send notifications, and continuously maintain your PR portfolio.",
   "mcpServers": ".mcp.json",
   "skills": "skills/"
 }
