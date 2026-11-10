@@ -6,7 +6,57 @@ requests, and proactive notifications as the bot, never as your Teams account.
 The bot uses your local Copilot authentication to run the coding agent. A second
 human Teams account is not needed.
 
-## Setup on the devbox
+## Guided setup from GitHub
+
+Install Git, Node.js 22.12+, and GitHub Copilot CLI on the devbox. Authenticate
+Git with an account that can access this private repository, then run:
+
+```powershell
+git clone https://github.com/gerardo-espi/teams-agent-plugin.git
+Set-Location .\teams-agent-plugin
+npm ci
+copilot login
+npm run setup
+```
+
+The interactive wizard asks for the **bot's display name**, your Entra user
+Object ID, and local workspace aliases/paths. It generates a bridge token and
+writes the ignored `.env` and `config.json` files. It can register a new Teams
+bot using your chosen name, or reuse credentials already in `.env`.
+
+Before choosing new-bot registration, install the Teams Developer CLI with
+`npm install -g @microsoft/teams.cli` and start a public HTTPS tunnel to port
+3978 using the commands in the manual setup below. Keep the tunnel running and
+paste its HTTPS URL into the wizard. The wizard runs `teams login`,
+`teams status`, and `teams app create`; tenant permission and sideloading must
+be enabled. Install the bot with the **Install in Teams** link printed by the
+Teams CLI, then run `npm start` and send `/help` in a personal chat.
+
+Stop the bridge before rerunning `npm run setup`. Existing credentials, tokens,
+ports, optional environment settings, and workspace aliases are preserved unless
+you choose to replace them. Changing the local name does not rename an existing
+Teams app; rename that app in Teams Developer Portal. To run multiple devboxes
+simultaneously, register a separate bot for each, rather than sharing one bot's
+messaging endpoint.
+
+If registration fails after creating a remote bot, setup keeps recovery files
+under `.data\setup-*` and reports the exact directory. Recover any credentials
+before retrying to avoid duplicate registrations; protect and remove that specific
+recovery directory when no longer needed. No credentials are sent to GitHub.
+Setup does not install prerequisites, change tenant policy, host the tunnel,
+start background services, or bypass approvals.
+
+To update, stop the bridge and run these commands from the checkout:
+
+```powershell
+git pull --ff-only
+npm ci
+npm start
+```
+
+Restart any Copilot CLI sessions that loaded the plugin to pick up updates.
+
+## Manual setup on the devbox
 
 1. Install Node.js 22.12+ and GitHub Copilot CLI. Sign in to Copilot interactively
    with `copilot login`. Keep the devbox awake while the service is needed.
