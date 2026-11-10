@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "teams-agent": {
+      "command": "node",
+      "args": ["${PLUGIN_ROOT}\\src\\mcp.js"],
+      "tools": ["*"]
+    }
+  }
+}

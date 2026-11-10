@@ -1,0 +1,7 @@
+{
+  "name": "teams-agent",
+  "version": "0.1.0",
+  "description": "Send updates to your personal Teams bot from a local Copilot workspace.",
+  "mcpServers": ".mcp.json",
+  "skills": "skills/"
+}
