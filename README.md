@@ -6,12 +6,47 @@ requests, and proactive notifications as the bot, never as your Teams account.
 The bot uses your local Copilot authentication to run the coding agent. A second
 human Teams account is not needed.
 
-## Guided setup from GitHub
+## Install with Copilot CLI (no manual clone)
 
 Install Git, Node.js 22.12+, GitHub Copilot CLI, Microsoft Dev Tunnels
 (`winget install Microsoft.devtunnel` on Windows), and the Teams Developer CLI
 (`npm install -g @microsoft/teams.cli`). Reopen your terminal after PATH changes.
-Authenticate Git with an account that can access this private repository, then run:
+The repository is public. Install the plugin and start Copilot:
+
+```powershell
+copilot plugin install gerardo-espi/teams-agent-plugin
+copilot
+```
+
+Ask Copilot:
+
+```text
+Use the teams-setup skill to set up my Teams agent.
+```
+
+The bundled skill locates its own installed plugin directory and opens a
+separate interactive setup terminal. Its launcher runs `npm ci` followed by
+`npm run setup`, stopping if installation fails. You do not need to find the
+plugin cache directory or clone a second copy. Approve the launcher when
+prompted, then complete the wizard in the new terminal. Restart the original
+Copilot session after dependency installation so its notification MCP server
+can start. This setup launcher currently supports Windows.
+
+For an existing installation, stop the bot/tunnel and securely back up `.env`,
+`config.json`, and `.data` outside the plugin directory before updating:
+
+```powershell
+copilot plugin update teams-agent
+```
+
+Start a new Copilot session and use `teams-setup` again, keeping existing bot
+credentials. Local configuration is not yet externalized from the installed
+plugin directory; restore your backed-up files there before rerunning setup
+if an update replaced them. Never commit or share the backup.
+
+## Guided setup from a checkout
+
+Alternatively, clone the public repository and run the same wizard directly:
 
 ```powershell
 git clone https://github.com/gerardo-espi/teams-agent-plugin.git
