@@ -8,8 +8,10 @@ human Teams account is not needed.
 
 ## Guided setup from GitHub
 
-Install Git, Node.js 22.12+, and GitHub Copilot CLI on the devbox. Authenticate
-Git with an account that can access this private repository, then run:
+Install Git, Node.js 22.12+, GitHub Copilot CLI, Microsoft Dev Tunnels
+(`winget install Microsoft.devtunnel` on Windows), and the Teams Developer CLI
+(`npm install -g @microsoft/teams.cli`). Reopen your terminal after PATH changes.
+Authenticate Git with an account that can access this private repository, then run:
 
 ```powershell
 git clone https://github.com/gerardo-espi/teams-agent-plugin.git
@@ -21,40 +23,52 @@ npm run setup
 
 The interactive wizard asks for the **bot's display name**, your Entra user
 Object ID, and local workspace aliases/paths. It generates a bridge token and
-writes the ignored `.env` and `config.json` files. It can register a new Teams
-bot using your chosen name, or reuse credentials already in `.env`.
+writes the ignored `.env` and `config.json` files. By default it also logs in to
+Dev Tunnels, creates or reuses a dedicated tunnel, hosts only the bot port, and
+automatically obtains its public HTTPS URL. No second terminal or URL copying
+is needed. It can register a new Teams bot using your chosen name, or reuse
+credentials already in `.env`.
 
-Before choosing new-bot registration, install the Teams Developer CLI with
-`npm install -g @microsoft/teams.cli` and start a public HTTPS tunnel to port
-3978 using the commands in the manual setup below. Keep the tunnel running and
-paste its HTTPS URL into the wizard. The wizard runs `teams login`,
-`teams status`, and `teams app create`; tenant permission and sideloading must
-be enabled. Install the bot with the **Install in Teams** link printed by the
-Teams CLI, then run `npm start` and send `/help` in a personal chat.
+The wizard runs `teams login`, `teams status`, and `teams app create`; tenant
+permission and sideloading must be enabled. It offers to open the **Install in
+Teams** page in your browser and start the bot. **Confirm Add in Teams yourself**,
+then send `/help` in a personal chat. Keep the setup terminal open: it manages
+both the tunnel and bridge, checks startup health, and stops its child processes
+on Ctrl+C or a service failure. It does not install a background Windows service.
+Sign-in prompts still require your interaction.
 
-Stop the bridge before rerunning `npm run setup`. Existing credentials, tokens,
+If you prefer an existing external tunnel, decline automatic tunnel hosting and
+paste its HTTPS URL when registering. Keep that external tunnel running yourself.
+
+Stop the previous setup/bridge before rerunning `npm run setup`. Existing credentials, tokens,
 ports, optional environment settings, and workspace aliases are preserved unless
 you choose to replace them. Changing the local name does not rename an existing
 Teams app; rename that app in Teams Developer Portal. To run multiple devboxes
 simultaneously, register a separate bot for each, rather than sharing one bot's
-messaging endpoint.
+messaging endpoint. Managed tunnel identity is kept in `.data\tunnel.json` and
+reused on subsequent runs. Setup refuses to host it if other ports have been
+added. Moving an existing bot to a different endpoint requires its Teams app ID
+and your explicit confirmation; this ID is different from the bot's client ID.
 
 If registration fails after creating a remote bot, setup keeps recovery files
 under `.data\setup-*` and reports the exact directory. Recover any credentials
 before retrying to avoid duplicate registrations; protect and remove that specific
 recovery directory when no longer needed. No credentials are sent to GitHub.
-Setup does not install prerequisites, change tenant policy, host the tunnel,
-start background services, or bypass approvals.
+Setup does not install prerequisites, change tenant policy, silently add the
+Teams app, start background services, or bypass approvals.
 
 To update, stop the bridge and run these commands from the checkout:
 
 ```powershell
 git pull --ff-only
 npm ci
-npm start
+npm run setup
 ```
 
-Restart any Copilot CLI sessions that loaded the plugin to pick up updates.
+Accept the saved configuration, decline new-bot registration, and let setup
+restart the tunnel and bot. `npm start` still starts only the bridge, for use
+with a separately hosted tunnel. Restart any Copilot CLI sessions that loaded
+the plugin to pick up updates.
 
 ## Manual setup on the devbox
 

@@ -9,7 +9,7 @@
     "start": "node --env-file=.env src/server.js",
     "mcp": "node src/mcp.js",
     "test": "node --test",
-    "check": "node --check src/server.js && node --check src/agent.js && node --check src/mcp.js && node --check src/setup.js"
+    "check": "node --check src/server.js && node --check src/agent.js && node --check src/mcp.js && node --check src/setup.js && node --check src/setup-runtime.js"
   },
   "dependencies": {
     "@github/copilot-sdk": "1.0.30",

@@ -103,9 +103,11 @@ async function shutdown() {
   if (notifications.listening) notifications.close();
   await agent.stop().catch(() => console.error("Could not stop an active Copilot task."));
   await Promise.allSettled([app.stop(), client.stop()]);
+  if (process.connected) process.disconnect();
 }
 process.once("SIGINT", () => { void shutdown(); });
 process.once("SIGTERM", () => { void shutdown(); });
+process.on("message", (message) => { if (message?.type === "shutdown") void shutdown(); });
 
 try {
   await client.start();
@@ -115,6 +117,7 @@ try {
   await listen(notifications, config.notifyPort);
   console.log(`Teams agent ready on 127.0.0.1:${config.port}. Tunnel only this port.`);
   console.log(`Private notification API on 127.0.0.1:${config.notifyPort}. Do not tunnel it.`);
+  process.send?.({ type: "ready" });
 } catch (error) {
   console.error(`Startup failed (${error.code ?? error.name}). Check configuration and Copilot login.`);
   await shutdown();
